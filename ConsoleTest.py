@@ -1,49 +1,40 @@
-from Crypto.Cipher import DES3
+from Crypto.Cipher import Blowfish
+from Crypto.Util.Padding import pad, unpad
 import base64
 
-class TripleDESCipher:
+class BlowfishECBEncryptor:
     def __init__(self, key):
         self.key = key
+        self.block_size = Blowfish.block_size
 
     def encrypt(self, plaintext):
-        cipher = DES3.new(self.key, DES3.MODE_ECB)
-        padded_plaintext = self._pad(plaintext)
-        ciphertext = cipher.encrypt(padded_plaintext)
-        # Codificar el texto cifrado en Base64
-        ciphertext_base64 = base64.b64encode(ciphertext)
-        return ciphertext_base64
+        cipher = Blowfish.new(self.key, Blowfish.MODE_ECB)
+        padded_data = pad(plaintext.encode('utf-8'), self.block_size)
+        ciphertext = cipher.encrypt(padded_data)
+        return base64.b64encode(ciphertext).decode('utf-8')
 
-    def decrypt(self, ciphertext_base64):
-        # Decodificar el texto cifrado en Base64
-        ciphertext = base64.b64decode(ciphertext_base64)
-        cipher = DES3.new(self.key, DES3.MODE_ECB)
-        padded_plaintext = cipher.decrypt(ciphertext)
-        plaintext = self._unpad(padded_plaintext)
+    def decrypt(self, ciphertext):
+        cipher = Blowfish.new(self.key, Blowfish.MODE_ECB)
+        ciphertext = base64.b64decode(ciphertext)
+        decrypted_data = cipher.decrypt(ciphertext)
+        plaintext = unpad(decrypted_data, self.block_size).decode('utf-8')
         return plaintext
 
-    def _pad(self, data):
-        padding_length = 8 - (len(data) % 8)
-        padding = bytes([padding_length] * padding_length)
-        return data + padding
+if __name__ == "__main__":
+    # Obtén la clave del usuario
+    key = input("Ingresa la clave (debe ser de 8 a 56 bytes): ").encode('utf-8')
 
-    def _unpad(self, data):
-        padding_length = data[-1]
-        return data[:-padding_length]
+    # Crea una instancia del cifrador
+    encryptor = BlowfishECBEncryptor(key)
 
-# Obtener la clave manualmente (asegúrate de que tenga 24 bytes)
-key = input("Clave de 24 bytes: ")
+    # Ingresa el texto a cifrar
+    plaintext = input("Ingresa el texto a cifrar: ")
 
-# Crear una instancia del cifrador
-cipher = TripleDESCipher(key.encode())
+    # Cifra el texto
+    ciphertext = encryptor.encrypt(plaintext)
 
-# Texto sin cifrar
-plaintext = input("Texto original: ")
+    print("Texto cifrado (Base64):", ciphertext)
 
-# Cifrar el mensaje y codificar en Base64
-ciphertext_base64 = cipher.encrypt(plaintext.encode())
-
-# Descifrar el mensaje
-decrypted_text = cipher.decrypt(ciphertext_base64)
-
-print("Texto cifrado en Base64:", ciphertext_base64.decode('utf-8'))
-print("Texto descifrado:", decrypted_text.decode('utf-8'))
+    # Descifra el texto cifrado
+    decrypted_text = encryptor.decrypt(ciphertext)
+    print("Texto descifrado:", decrypted_text)
